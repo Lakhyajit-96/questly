@@ -62,7 +62,11 @@ const Agent = ({
     };
 
     const onError = (error: Error) => {
-      console.log("Error:", error);
+      console.error("Vapi Error:", error);
+      setCallStatus(CallStatus.INACTIVE);
+      
+      // Show user-friendly error message
+      alert(`Voice interview error: ${error.message || 'Unknown error'}. Please try again.`);
     };
 
     vapi.on("call-start", onCallStart);
@@ -117,26 +121,50 @@ const Agent = ({
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
 
-    if (type === "generate") {
-      await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
+    try {
+      console.log("Starting Vapi call...");
+      console.log("Environment check:", {
+        hasVapiToken: !!process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN,
+        hasWorkflowId: !!process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID,
+        type: type,
+        userName: userName,
+        userId: userId
       });
-    } else {
-      let formattedQuestions = "";
-      if (questions) {
-        formattedQuestions = questions
-          .map((question) => `- ${question}`)
-          .join("\n");
-      }
 
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
-      });
+      if (type === "generate") {
+        const workflowId = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID;
+        if (!workflowId) {
+          throw new Error("Vapi workflow ID not configured in production");
+        }
+        
+        console.log("Starting workflow call with ID:", workflowId);
+        await vapi.start(workflowId, {
+          variableValues: {
+            username: userName,
+            userid: userId,
+          },
+        });
+      } else {
+        let formattedQuestions = "";
+        if (questions) {
+          formattedQuestions = questions
+            .map((question) => `- ${question}`)
+            .join("\n");
+        }
+
+        console.log("Starting interviewer call with questions:", formattedQuestions);
+        await vapi.start(interviewer, {
+          variableValues: {
+            questions: formattedQuestions,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to start Vapi call:", error);
+      setCallStatus(CallStatus.INACTIVE);
+      
+      // Show user-friendly error message
+      alert(`Failed to start voice interview: ${error.message || 'Unknown error'}. Please check your microphone permissions and try again.`);
     }
   };
 
