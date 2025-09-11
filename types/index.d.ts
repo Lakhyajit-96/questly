@@ -23,6 +23,10 @@ interface Interview {
   userId: string;
   type: string;
   finalized: boolean;
+  completedAt?: string;
+  status?: string;
+  duration?: number;
+  profilePictureUrl?: string | null;
 }
 
 interface CreateFeedbackParams {
@@ -36,6 +40,8 @@ interface User {
   name: string;
   email: string;
   id: string;
+  profilePictureUrl?: string | null;
+  resumeUrl?: string | null;
 }
 
 interface InterviewCardProps {
@@ -45,6 +51,8 @@ interface InterviewCardProps {
   type: string;
   techstack: string[];
   createdAt?: string;
+  section?: "your" | "take";
+  currentUserId?: string;
 }
 
 interface AgentProps {
@@ -54,6 +62,8 @@ interface AgentProps {
   feedbackId?: string;
   type: "generate" | "interview";
   questions?: string[];
+  profilePictureUrl?: string | null;
+  duration?: number;
 }
 
 interface RouteParams {
@@ -81,6 +91,8 @@ interface SignUpParams {
   name: string;
   email: string;
   password: string;
+  profilePictureUrl?: string | null;
+  resumeUrl?: string | null;
 }
 
 type FormType = "sign-in" | "sign-up";

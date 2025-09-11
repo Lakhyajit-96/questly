@@ -1,9 +1,57 @@
-import Image from "next/image";
+"use client";
 
+import Image from "next/image";
+import { useState, useEffect } from "react";
 import { cn, getTechLogos } from "@/lib/utils";
 
-const DisplayTechIcons = async ({ techStack }: TechIconProps) => {
-  const techIcons = await getTechLogos(techStack);
+interface TechIconProps {
+  techStack: string[];
+}
+
+interface TechIcon {
+  tech: string;
+  url: string;
+}
+
+const DisplayTechIcons = ({ techStack }: TechIconProps) => {
+  const [techIcons, setTechIcons] = useState<TechIcon[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTechIcons = async () => {
+      try {
+        const icons = await getTechLogos(techStack);
+        setTechIcons(icons);
+      } catch (error) {
+        console.error("Error fetching tech icons:", error);
+        // Fallback to simple tech names
+        setTechIcons(techStack.map(tech => ({ tech, url: "/tech.svg" })));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (techStack && techStack.length > 0) {
+      fetchTechIcons();
+    } else {
+      setIsLoading(false);
+    }
+  }, [techStack]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-row gap-2">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="relative group bg-dark-300 rounded-full p-2 flex flex-center animate-pulse"
+          >
+            <div className="w-5 h-5 bg-gray-600 rounded"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-row">

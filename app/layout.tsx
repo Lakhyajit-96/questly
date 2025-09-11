@@ -24,7 +24,16 @@ export default function RootLayout({
       <body className={`${monaSans.className} antialiased pattern`}>
         {children}
 
-        <Toaster />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#1f2937',
+              color: '#ffffff',
+              border: '1px solid #374151',
+            },
+          }}
+        />
       </body>
     </html>
   );

@@ -30,7 +30,7 @@ const InterviewDetails = async ({ params }: RouteParams) => {
         <div className="flex flex-row gap-4 items-center max-sm:flex-col">
           <div className="flex flex-row gap-4 items-center">
             <Image
-              src={getRandomInterviewCover()}
+              src={getRandomInterviewCover(id)}
               alt="cover-image"
               width={40}
               height={40}
@@ -54,6 +54,8 @@ const InterviewDetails = async ({ params }: RouteParams) => {
         type="interview"
         questions={interview.questions}
         feedbackId={feedback?.id}
+        profilePictureUrl={interview.profilePictureUrl}
+        duration={interview.duration}
       />
     </>
   );

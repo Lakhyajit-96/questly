@@ -12,11 +12,18 @@ import {
 
 async function Home() {
   const user = await getCurrentUser();
+  console.log("Current user:", user);
 
-  const [userInterviews, allInterview] = await Promise.all([
-    getInterviewsByUserId(user?.id!),
-    getLatestInterviews({ userId: user?.id! }),
-  ]);
+  // Only fetch interviews if user exists
+  const [userInterviews, allInterview] = user?.id 
+    ? await Promise.all([
+        getInterviewsByUserId(user.id),
+        getLatestInterviews({ userId: user.id }),
+      ])
+    : [[], []];
+
+  console.log("User interviews:", userInterviews?.length);
+  console.log("All interviews:", allInterview?.length);
 
   const hasPastInterviews = userInterviews?.length! > 0;
   const hasUpcomingInterviews = allInterview?.length! > 0;
@@ -45,7 +52,7 @@ async function Home() {
       </section>
 
       <section className="flex flex-col gap-6 mt-8">
-        <h2>Your Interviews</h2>
+        <h2>Your Past Interviews</h2>
 
         <div className="interviews-section">
           {hasPastInterviews ? (
@@ -58,6 +65,8 @@ async function Home() {
                 type={interview.type}
                 techstack={interview.techstack}
                 createdAt={interview.createdAt}
+                section="your"
+                currentUserId={user?.id}
               />
             ))
           ) : (
@@ -67,7 +76,7 @@ async function Home() {
       </section>
 
       <section className="flex flex-col gap-6 mt-8">
-        <h2>Take Interviews</h2>
+        <h2>Pick your interview</h2>
 
         <div className="interviews-section">
           {hasUpcomingInterviews ? (
@@ -80,6 +89,8 @@ async function Home() {
                 type={interview.type}
                 techstack={interview.techstack}
                 createdAt={interview.createdAt}
+                section="take"
+                currentUserId={user?.id}
               />
             ))
           ) : (

@@ -1,20 +1,14 @@
-import Agent from "@/components/Agent";
+import InterviewForm from "@/components/InterviewForm";
 import { getCurrentUser } from "@/lib/actions/auth.action";
 
 const Page = async () => {
   const user = await getCurrentUser();
 
   return (
-    <>
-      <h3>Interview generation</h3>
-
-      <Agent
-        userName={user?.name!}
-        userId={user?.id}
-        profileImage={user?.profileURL}
-        type="generate"
-      />
-    </>
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto">
+      {/* Form-based generation */}
+      <InterviewForm userId={user?.id!} />
+    </div>
   );
 };
 

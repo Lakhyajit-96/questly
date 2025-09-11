@@ -92,6 +92,26 @@ const Feedback = async ({ params }: RouteParams) => {
         </ul>
       </div>
 
+      {/* Final Verdict */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="font-bold">Final Verdict:</h3>
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            (feedback?.totalScore || 0) >= 60 
+              ? 'bg-green-600 text-white' 
+              : 'bg-red-600 text-white'
+          }`}>
+            {(feedback?.totalScore || 0) >= 60 ? 'Recommended' : 'Not Recommended'}
+          </div>
+        </div>
+        <p className="text-gray-400">
+          {(feedback?.totalScore || 0) >= 60 
+            ? 'This candidate shows strong potential and would be a good fit for the role.'
+            : 'This candidate does not meet the minimum requirements for this position.'
+          }
+        </p>
+      </div>
+
       <div className="buttons">
         <Button className="btn-secondary flex-1">
           <Link href="/" className="flex w-full justify-center">

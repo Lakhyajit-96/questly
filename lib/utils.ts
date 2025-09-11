@@ -23,8 +23,24 @@ const checkIconExists = async (url: string) => {
 };
 
 export const getTechLogos = async (techArray: string[]) => {
-  const logoURLs = techArray.map((tech) => {
+  console.log("getTechLogos called with:", techArray);
+  
+  // Filter out undefined, null, or empty values
+  const validTechArray = techArray.filter(tech => tech && typeof tech === 'string' && tech.trim() !== '');
+  
+  console.log("Valid tech array after filtering:", validTechArray);
+  
+  const logoURLs = validTechArray.map((tech) => {
     const normalized = normalizeTechName(tech);
+    console.log(`Tech: "${tech}" -> Normalized: "${normalized}"`);
+    
+    // If normalized is undefined, use fallback immediately
+    if (!normalized) {
+      return {
+        tech,
+        url: "/tech.svg",
+      };
+    }
     return {
       tech,
       url: `${techIconBaseURL}/${normalized}/${normalized}-original.svg`,
@@ -41,7 +57,19 @@ export const getTechLogos = async (techArray: string[]) => {
   return results;
 };
 
-export const getRandomInterviewCover = () => {
-  const randomIndex = Math.floor(Math.random() * interviewCovers.length);
-  return `/covers${interviewCovers[randomIndex]}`;
+export const getRandomInterviewCover = (interviewId?: string) => {
+  if (interviewId) {
+    // Use interview ID to generate deterministic "random" index
+    let hash = 0;
+    for (let i = 0; i < interviewId.length; i++) {
+      const char = interviewId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    const index = Math.abs(hash) % interviewCovers.length;
+    return `/covers${interviewCovers[index]}`;
+  }
+  
+  // Fallback to first cover if no ID provided
+  return `/covers${interviewCovers[0]}`;
 };

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { toast } from "sonner";
 import { auth } from "@/firebase/client";
 import { useForm } from "react-hook-form";
@@ -25,6 +26,8 @@ const authFormSchema = (type: FormType) => {
     name: type === "sign-up" ? z.string().min(3) : z.string().optional(),
     email: z.string().email(),
     password: z.string().min(3),
+    profilePicture: type === "sign-up" ? z.any().optional() : z.any().optional(),
+    resume: type === "sign-up" ? z.any().optional() : z.any().optional(),
   });
 };
 
@@ -38,34 +41,121 @@ const AuthForm = ({ type }: { type: FormType }) => {
       name: "",
       email: "",
       password: "",
+      profilePicture: null,
+      resume: null,
     },
   });
+
+  // State to track uploaded files and their URLs
+  const [uploadedProfilePicture, setUploadedProfilePicture] = useState<{
+    file: File;
+    url: string;
+  } | null>(null);
+  const [uploadedResume, setUploadedResume] = useState<{
+    file: File;
+    url: string;
+  } | null>(null);
+
+  // Function to handle immediate profile picture upload
+  const handleProfilePictureUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setUploadedProfilePicture({ file, url: result.url });
+        toast.success(`Profile picture uploaded successfully! (${file.name})`);
+      } else {
+        toast.error("Failed to upload profile picture");
+      }
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      toast.error("Failed to upload profile picture");
+    }
+  };
+
+  // Function to handle immediate resume upload
+  const handleResumeUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload-resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setUploadedResume({ file, url: result.url });
+        toast.success(`Resume uploaded successfully! (${file.name})`);
+      } else {
+        toast.error("Failed to upload resume");
+      }
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      toast.error("Failed to upload resume");
+    }
+  };
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       if (type === "sign-up") {
         const { name, email, password } = data;
+        toast.info("Starting account creation process...");
+        // Small delay to ensure toast is visible
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        // Use already uploaded files
+        const profilePictureUrl = uploadedProfilePicture?.url || null;
+        const resumeUrl = uploadedResume?.url || null;
 
-        const result = await signUp({
-          uid: userCredential.user.uid,
-          name: name!,
-          email,
-          password,
-        });
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            email,
+            password
+          );
 
-        if (!result.success) {
-          toast.error(result.message);
+          const result = await signUp({
+            uid: userCredential.user.uid,
+            name: name!,
+            email,
+            password,
+            profilePictureUrl,
+            resumeUrl,
+          });
+
+          if (!result.success) {
+            toast.error(result.message);
+            return;
+          }
+
+          toast.success("Account created successfully. Please sign in.");
+          
+          // Add a small delay to ensure the toast is visible before redirect
+          setTimeout(() => {
+            router.push("/sign-in");
+          }, 1500);
+        } catch (error: any) {
+          console.error("Firebase auth error:", error);
+          if (error.code === 'auth/email-already-in-use') {
+            toast.error("This email is already registered. Please use a different email or sign in instead.");
+          } else if (error.code === 'auth/weak-password') {
+            toast.error("Password is too weak. Please choose a stronger password.");
+          } else if (error.code === 'auth/invalid-email') {
+            toast.error("Please enter a valid email address.");
+          } else {
+            toast.error("Failed to create account. Please try again.");
+          }
           return;
         }
-
-        toast.success("Account created successfully. Please sign in.");
-        router.push("/sign-in");
       } else {
         const { email, password } = data;
 
@@ -116,8 +206,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
               <FormField
                 control={form.control}
                 name="name"
-                label="Name"
-                placeholder="Your Name"
+                label="Full name"
+                placeholder="Your full name"
                 type="text"
               />
             )}
@@ -138,8 +228,134 @@ const AuthForm = ({ type }: { type: FormType }) => {
               type="password"
             />
 
+            {!isSignIn && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">Profile picture</label>
+                  {uploadedProfilePicture ? (
+                    /* Show uploaded file with preview */
+                    <div className="flex items-center gap-4 p-3 bg-gray-700 border border-gray-600 rounded-full">
+                      <Image
+                        src={uploadedProfilePicture.url}
+                        alt="Uploaded profile picture"
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover"
+                      />
+                      <div className="flex-1">
+                        <span className="text-white text-sm font-medium">{uploadedProfilePicture.file.name}</span>
+                        <p className="text-gray-400 text-xs">Profile picture uploaded</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedProfilePicture(null);
+                          form.setValue("profilePicture", null);
+                        }}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        title="Remove uploaded image"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    /* Show upload button */
+                    <div className="btn-upload">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            await handleProfilePictureUpload(file);
+                          }
+                        }}
+                        className="hidden"
+                        id="profile-picture"
+                      />
+                      <label htmlFor="profile-picture" className="flex items-center gap-2 cursor-pointer w-full justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M14 2V8H20" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 13H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 17H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M10 9H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span className="text-white">Upload an image</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">Resume</label>
+                  {uploadedResume ? (
+                    /* Show uploaded file with preview */
+                    <div className="flex items-center gap-4 p-3 bg-gray-700 border border-gray-600 rounded-full">
+                      <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M14 2V8H20" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 13H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 17H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M10 9H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-white text-sm font-medium">{uploadedResume.file.name}</span>
+                        <p className="text-gray-400 text-xs">Resume uploaded</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedResume(null);
+                          form.setValue("resume", null);
+                        }}
+                        className="text-gray-400 hover:text-white transition-colors"
+                        title="Remove uploaded resume"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    /* Show upload button */
+                    <div className="btn-upload">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            await handleResumeUpload(file);
+                          }
+                        }}
+                        className="hidden"
+                        id="resume"
+                      />
+                      <label htmlFor="resume" className="flex items-center gap-2 cursor-pointer w-full justify-center">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M14 2V8H20" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 13H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M16 17H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M10 9H8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span className="text-white">Upload resume (PDF, DOC, DOCX)</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             <Button className="btn" type="submit">
-              {isSignIn ? "Sign In" : "Create an Account"}
+              {isSignIn ? "Sign In" : "Create an account"}
             </Button>
           </form>
         </Form>
