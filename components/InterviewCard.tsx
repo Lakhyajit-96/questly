@@ -29,10 +29,12 @@ const InterviewCard = ({
     const fetchFeedback = async () => {
       if (userId && interviewId) {
         try {
+          console.log(`Fetching feedback for interviewId: ${interviewId}, userId: ${userId}, section: ${section}`);
           const feedbackData = await getFeedbackByInterviewId({
             interviewId,
             userId,
           });
+          console.log(`Feedback data received:`, feedbackData);
           setFeedback(feedbackData);
         } catch (error) {
           console.error("Error fetching feedback:", error);
@@ -40,7 +42,7 @@ const InterviewCard = ({
       }
     };
     fetchFeedback();
-  }, [interviewId, userId]);
+  }, [interviewId, userId, section]);
 
   const handleDelete = async () => {
     if (!currentUserId) {
@@ -132,6 +134,12 @@ const InterviewCard = ({
             <div className="flex flex-row gap-2 items-center">
               <Image src="/star.svg" width={22} height={22} alt="star" />
               <p>{feedback?.totalScore || "---"}/100</p>
+              {/* Debug info */}
+              {process.env.NODE_ENV === 'development' && (
+                <span className="text-xs text-gray-500 ml-2">
+                  {feedback ? `Score: ${feedback.totalScore}` : 'No feedback'}
+                </span>
+              )}
             </div>
           </div>
 
